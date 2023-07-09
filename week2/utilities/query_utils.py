@@ -208,6 +208,7 @@ def add_click_priors(query_obj, user_query, priors_gb):
                     "query_string": {
                         "query": click_prior,
                         "default_field": "sku",
+                        "default_operator": "OR",
                         "boost": 100000
                     }
                 } # Implement a query object that matches on the ID or SKU with weights of
