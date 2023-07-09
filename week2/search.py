@@ -64,8 +64,21 @@ def autocomplete():
         if prefix is not None:
             type = request.args.get("type", "queries") # If type == queries, this is an autocomplete request, else if products, it's an instant search request.
             ##### W2, L3, S1
-            search_response = None
-            print("TODO: implement autocomplete AND instant search")
+            suggester_query = {
+                "suggest": {
+                    "autocomplete": {
+                    "prefix": prefix,
+                    "completion": {
+                        "field": "suggest",
+                        "skip_duplicates": True
+                    }
+                    }
+                }
+            }
+            
+            index_to_search = 'bbuy_queries' if type == 'queries' else 'bbuy_products'
+            search_response = get_opensearch().search(body=suggester_query, index=index_to_search)
+
             if (search_response and search_response['suggest']['autocomplete'] and search_response['suggest']['autocomplete'][0]['length'] > 0): # just a query response
                 results = search_response['suggest']['autocomplete'][0]['options']
     print(f"Results: {results}")
@@ -106,8 +119,10 @@ def query():
 
         query_obj = qu.create_query(user_query,  [], sort, sortDir, size=20)  # We moved create_query to a utility class so we could use it elsewhere.
         ##### W2, L1, S2
+        qu.add_click_priors(query_obj, user_query, prior_clicks)
 
         ##### W2, L2, S2
+        qu.add_spelling_suggestions(query_obj, user_query)
         print("Plain ol q: %s" % query_obj)
     elif request.method == 'GET':  # Handle the case where there is no query or just loading the page
         user_query = request.args.get("query", "*")
@@ -122,7 +137,10 @@ def query():
         query_obj = qu.create_query(user_query,  filters, sort, sortDir, size=20)
         #### W2, L1, S2
 
+        qu.add_click_priors(query_obj, user_query, prior_clicks)
+
         ##### W2, L2, S2
+        qu.add_spelling_suggestions(query_obj, user_query)
 
     else:
         query_obj = qu.create_query("*", "", [], sort, sortDir, size=100)
